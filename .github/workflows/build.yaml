@@ -48,9 +48,20 @@ jobs:
       - name: Pack
         run: dotnet pack HelloWorld.csproj -c Release --output nupkgs /p:Version=${{ env.GitVersion_NuGetVersion }}
 
-      - name: Upload NuGet Package
+      - name: Create IIS Deployment Package
+        run: |
+          dotnet publish HelloWorld.csproj -c Release -o publish \
+            --runtime win-x64 \
+            --self-contained false \
+            /p:Version=${{ env.GitVersion_NuGetVersion }}
+          cd publish
+          zip -r ../webapp.zip *
+
+      - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: nuget-package
-          path: nupkgs/
+          name: deployment-packages
+          path: |
+            nupkgs/
+            webapp.zip
           retention-days: 5
