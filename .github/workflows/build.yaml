@@ -1,16 +1,32 @@
 name: dotnet package
 
-on: [push]
+on: 
+  push:
+    branches: [ main ]
+  release:
+    types: [published]
 
 jobs:
   build:
     runs-on: ubuntu-24.04
     env:
       DOTNET_SYSTEM_GLOBALIZATION_INVARIANT: 1
-
+  
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install GitVersion
+        uses: gittools/actions/gitversion/setup@v0.12.0
+        with:
+          versionSpec: '5.x'
+
+      - name: Determine Version
+        uses: gittools/actions/gitversion/execute@v0.12.0
+        with:
+          useConfigFile: true
 
       - name: Set up .NET
         uses: actions/setup-dotnet@v4
@@ -23,5 +39,18 @@ jobs:
       - name: Restore Nuget packages
         run: dotnet restore HelloWorld.csproj
 
+      - name: Test
+        run: dotnet test HelloWorld.csproj        
+
       - name: Build project
-        run: dotnet build HelloWorld.csproj -c Release -o build  
+        run: dotnet build HelloWorld.csproj -c Release -o build
+
+      - name: Pack
+        run: dotnet pack HelloWorld.csproj -c Release --output nupkgs /p:Version=${{ env.GitVersion_NuGetVersion }}
+
+      - name: Upload NuGet Package
+        uses: actions/upload-artifact@v4
+        with:
+          name: nuget-package
+          path: nupkgs/
+          retention-days: 5

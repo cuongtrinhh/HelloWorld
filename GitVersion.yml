@@ -1,0 +1,13 @@
+mode: ContinuousDeployment
+branches:
+  main:
+    regex: ^master$|^main$
+    mode: ContinuousDeployment
+    tag: ''
+    increment: Patch
+    prevent-increment-of-merged-branch-version: true
+    source-branches: []
+    tracks-release-branches: false
+    is-release-branch: false
+    is-mainline: true
+    pre-release-weight: 55000 

@@ -4,6 +4,9 @@
     <TargetFramework>net9.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+    <IsPackable>true</IsPackable>
+    <Authors>Cuong Trinh</Authors>
+    <Description>Hello World Web Application</Description>
   </PropertyGroup>
 
 </Project>
