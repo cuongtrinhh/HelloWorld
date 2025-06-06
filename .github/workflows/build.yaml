@@ -57,11 +57,9 @@ jobs:
           cd publish
           zip -r ../webapp.zip *
 
-      - name: Upload Artifacts
+      - name: Upload IIS Deployment Package
         uses: actions/upload-artifact@v4
         with:
-          name: deployment-packages
-          path: |
-            nupkgs/
-            webapp.zip
+          name: iis-deployment
+          path: webapp.zip
           retention-days: 5
