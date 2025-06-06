@@ -18,7 +18,7 @@ jobs:
           dotnet-version: 6.0.x
 
       - name: Install OpenSSL
-        run: sudo apt-get install libssl3 libssl1.1 -y
+        run: sudo apt-get install libssl3 -y
           
       - name: Restore Nuget packages
         run: dotnet restore HelloWorld.csproj
