@@ -47,3 +47,9 @@ bld/
 !**/packages/build/
 *.nuget.props
 *.nuget.targets 
+
+# Zip files
+*.zip
+
+#Logs
+*.log

@@ -6,6 +6,16 @@ on:
   release:
     types: [published]
 
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+  # Deployment configuration
+  DEPLOY_SERVER: ${{ secrets.DEPLOY_SERVER }}
+  DEPLOY_USERNAME: ${{ secrets.DEPLOY_USERNAME }}
+  DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+  DEPLOY_PORT: ${{ secrets.DEPLOY_PORT || '22' }}
+  DEPLOY_CONTAINER_NAME: ${{ secrets.DEPLOY_CONTAINER_NAME || 'helloworld' }}
+
 jobs:
   build:
     runs-on: ubuntu-24.04
@@ -60,6 +70,67 @@ jobs:
       - name: Upload IIS Deployment Package
         uses: actions/upload-artifact@v4
         with:
-          name: webapp
+          name: iis-deployment
           path: webapp.zip
           retention-days: 5
+
+      # Docker build and push steps
+      - name: Log in to the Container registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata (tags, labels) for Docker
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=sha,format=short
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # Deployment step
+      - name: Deploy to server
+        if: env.DEPLOY_SERVER != ''
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ env.DEPLOY_SERVER }}
+          username: ${{ env.DEPLOY_USERNAME }}
+          key: ${{ env.DEPLOY_SSH_KEY }}
+          port: ${{ env.DEPLOY_PORT }}
+          script: |
+            # Login to GitHub Container Registry
+            echo ${{ secrets.GITHUB_TOKEN }} | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+            
+            # Pull the latest image
+            docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:main
+            
+            # Stop and remove existing container if it exists
+            docker stop ${{ env.DEPLOY_CONTAINER_NAME }} || true
+            docker rm ${{ env.DEPLOY_CONTAINER_NAME }} || true
+            
+            # Run the new container
+            docker run -d \
+              --name ${{ env.DEPLOY_CONTAINER_NAME }} \
+              --restart unless-stopped \
+              -p 80:80 \
+              -p 443:443 \
+              ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:main
+            
+            # Clean up old images
+            docker image prune -f
