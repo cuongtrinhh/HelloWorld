@@ -60,6 +60,6 @@ jobs:
       - name: Upload IIS Deployment Package
         uses: actions/upload-artifact@v4
         with:
-          name: iis-deployment
+          name: webapp
           path: webapp.zip
           retention-days: 5
