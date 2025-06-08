@@ -5,6 +5,18 @@ on:
     branches: [ main ]
   release:
     types: [published]
+  workflow_dispatch:
+    inputs:
+      build_docker:
+        description: 'Build and push Docker image'
+        required: false
+        type: boolean
+        default: false
+      deploy:
+        description: 'Deploy to server'
+        required: false
+        type: boolean
+        default: false
 
 env:
   REGISTRY: ghcr.io
@@ -74,7 +86,16 @@ jobs:
           path: webapp.zip
           retention-days: 5
 
-      # Docker build and push steps
+  docker:
+    needs: build
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.build_docker == true
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
       - name: Log in to the Container registry
         uses: docker/login-action@v3
         with:
@@ -104,9 +125,12 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      # Deployment step
+  deploy:
+    needs: docker
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.deploy == true
+    runs-on: ubuntu-24.04
+    steps:
       - name: Deploy to server
-        if: env.DEPLOY_SERVER != ''
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ env.DEPLOY_SERVER }}
